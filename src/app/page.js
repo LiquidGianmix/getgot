@@ -1,95 +1,112 @@
+'use client'
 import Image from 'next/image'
 import styles from './page.module.css'
+import { useState, useEffect } from 'react'
+import Cookies from 'js-cookie';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+	const [code, setCode] = useState(Array(6).fill(''));
+	const router = useRouter();
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+	useEffect(() => {
+		const savedCode = Cookies.get('userCode');
+		if (savedCode) {
+			router.push(`/${savedCode}`);
+		}
+	}, [router]);
 
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
+	const handleChange = (index, value) => {
+		let newCode = [...code];
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
+		// If the field is empty or the cursor is at the start, replace the current digit
+		if (code[index] === '' || value.length === 1) {
+			newCode[index] = value;
+		} else {
+			if (index < 5) {
+				newCode[index + 1] = value.slice(-1);
+				index++;
+			}
+		}
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+		setCode(newCode);
+
+		// Focus the next field
+		const nextInput = document.getElementById(`input-${index + 1}`);
+		if (nextInput) {
+			nextInput.focus();
+		}
+	};
+
+	const handleKeyDown = (e, index) => {
+		if (e.key === 'Backspace') {
+			if (code[index] === '' && index > 0) {
+				e.preventDefault();
+				let newCode = [...code];
+				newCode[index - 1] = '';
+				setCode(newCode);
+				const prevInput = document.getElementById(`input-${index - 1}`);
+				prevInput && prevInput.focus();
+			} else if (code[index]) {
+				let newCode = [...code];
+				newCode[index] = '';
+				setCode(newCode);
+			}
+		}
+	};
+
+
+	const handleSubmit = async (event) => {
+		event.preventDefault();
+		try {
+		  const response = await fetch('/api/validateCode', {
+			method: 'POST',
+			headers: {
+			  'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ code }),
+		  });
+	  
+		  const result = await response.json();
+		  if (result.isValid) {
+			Cookies.set('userCode', code.join(""), { expires: 7 });
+			router.push(`/${code.join("")}`);
+		  } else {
+			alert('Invalid code. Please try again.');
+		  }
+		} catch (error) {
+		  console.error('Error:', error);
+		  // Handle the error appropriately
+		}
+	  };
+	  
+
+	  return (
+		<main className={styles.main}>
+		  <div className={styles.cont}>
+			<div className={styles.hmm}></div>
+			<div className={styles.title}>
+				Enter Your Code
+			</div>
+		  </div>
+		 <div className={styles.hmm}>
+		  <form onSubmit={handleSubmit} className={styles.form}>
+			{code.map((digit, index) => (
+			  <input
+				key={index}
+				id={`input-${index}`}
+				className={styles.inputField} // Use the class from module CSS
+				type="number"
+				maxLength="1"
+				onKeyDown={(e) => handleKeyDown(e, index)}
+				value={digit}
+				onChange={(e) => handleChange(index, e.target.value)}
+			  />
+			))}
+			<button type="submit" className={styles.submitButton}>Submit</button>
+		  </form>
+		  </div>
+		</main>
+	  );
 }

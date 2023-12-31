@@ -1,0 +1,5 @@
+Make a player guess the number you're thinking of between 1 and 20.
+Make a player describe their favorite hobby.
+Make a player guess the ending of a book or movie they haven't seen.
+Get a player to describe their ideal superpower.
+Make a player list items they'd take on a hike.
